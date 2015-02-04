@@ -25,7 +25,7 @@
  *  o '0' means 'OFF'
  *  o 'X' means 'Don't care'
  *
- * SMDK6410, SMDK6440, SMDK6450 Base B/D: CFG1-0000, CFG2-1111
+ * SMDK6410 Base B/D: CFG1-0000, CFG2-1111
  * SMDKC110, SMDKV210: CFGB11-100100, CFGB12-0000
  */
 
@@ -173,7 +173,6 @@ static int snd_smdk_probe(struct platform_device *pdev)
 
 static struct platform_driver snd_smdk_driver = {
 	.driver = {
-		.owner = THIS_MODULE,
 		.name = "samsung-smdk-pcm",
 	},
 	.probe = snd_smdk_probe,

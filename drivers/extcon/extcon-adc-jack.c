@@ -112,7 +112,6 @@ static int adc_jack_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to allocate extcon device\n");
 		return -ENOMEM;
 	}
-	data->edev->dev.parent = &pdev->dev;
 	data->edev->name = pdata->name;
 
 	/* Check the length of array and set num_cables */
@@ -183,7 +182,6 @@ static struct platform_driver adc_jack_driver = {
 	.remove         = adc_jack_remove,
 	.driver         = {
 		.name   = "adc-jack",
-		.owner  = THIS_MODULE,
 	},
 };
 

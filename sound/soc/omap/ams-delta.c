@@ -301,7 +301,7 @@ static int cx81801_open(struct tty_struct *tty)
 static void cx81801_close(struct tty_struct *tty)
 {
 	struct snd_soc_codec *codec = tty->disc_data;
-	struct snd_soc_dapm_context *dapm = &codec->card->dapm;
+	struct snd_soc_dapm_context *dapm = &codec->component.card->dapm;
 
 	del_timer_sync(&cx81801_timer);
 
@@ -599,7 +599,6 @@ static int ams_delta_remove(struct platform_device *pdev)
 static struct platform_driver ams_delta_driver = {
 	.driver = {
 		.name = DRV_NAME,
-		.owner = THIS_MODULE,
 	},
 	.probe = ams_delta_probe,
 	.remove = ams_delta_remove,

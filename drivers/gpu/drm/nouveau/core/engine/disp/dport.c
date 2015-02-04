@@ -28,9 +28,9 @@
 #include <subdev/bios/init.h>
 #include <subdev/i2c.h>
 
-#include <engine/disp.h>
+#include "nv50.h"
 
-#include <core/class.h>
+#include <nvif/class.h>
 
 #include "dport.h"
 #include "outpdp.h"
@@ -326,7 +326,7 @@ void
 nouveau_dp_train(struct work_struct *w)
 {
 	struct nvkm_output_dp *outp = container_of(w, typeof(*outp), lt.work);
-	struct nouveau_disp *disp = nouveau_disp(outp);
+	struct nv50_disp_priv *priv = (void *)nouveau_disp(outp);
 	const struct dp_rates *cfg = nouveau_dp_rates;
 	struct dp_state _dp = {
 		.outp = outp,
@@ -334,8 +334,11 @@ nouveau_dp_train(struct work_struct *w)
 	u32 datarate = 0;
 	int ret;
 
+	if (!outp->base.info.location && priv->sor.magic)
+		priv->sor.magic(&outp->base);
+
 	/* bring capabilities within encoder limits */
-	if (nv_mclass(disp) < NVD0_DISP_CLASS)
+	if (nv_mclass(priv) < GF110_DISP)
 		outp->dpcd[2] &= ~DPCD_RC02_TPS3_SUPPORTED;
 	if ((outp->dpcd[2] & 0x1f) > outp->base.info.dpconf.link_nr) {
 		outp->dpcd[2] &= ~DPCD_RC02_MAX_LANE_COUNT;
@@ -354,7 +357,7 @@ nouveau_dp_train(struct work_struct *w)
 	cfg--;
 
 	/* disable link interrupt handling during link training */
-	nouveau_event_put(outp->irq);
+	nvkm_notify_put(&outp->irq);
 
 	/* enable down-spreading and execute pre-train script from vbios */
 	dp_link_train_init(dp, outp->dpcd[3] & 0x01);
@@ -395,5 +398,5 @@ nouveau_dp_train(struct work_struct *w)
 	DBG("training complete\n");
 	atomic_set(&outp->lt.done, 1);
 	wake_up(&outp->lt.wait);
-	nouveau_event_get(outp->irq);
+	nvkm_notify_get(&outp->irq);
 }

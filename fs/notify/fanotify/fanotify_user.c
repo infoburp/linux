@@ -66,7 +66,7 @@ static struct fsnotify_event *get_one_event(struct fsnotify_group *group,
 
 	/* held the notification_mutex the whole time, so this is the
 	 * same event we peeked above */
-	return fsnotify_remove_notify_event(group);
+	return fsnotify_remove_first_event(group);
 }
 
 static int create_fd(struct fsnotify_group *group,
@@ -78,7 +78,7 @@ static int create_fd(struct fsnotify_group *group,
 
 	pr_debug("%s: group=%p event=%p\n", __func__, group, event);
 
-	client_fd = get_unused_fd();
+	client_fd = get_unused_fd_flags(group->fanotify_data.f_flags);
 	if (client_fd < 0)
 		return client_fd;
 
@@ -259,16 +259,15 @@ static ssize_t fanotify_read(struct file *file, char __user *buf,
 	struct fsnotify_event *kevent;
 	char __user *start;
 	int ret;
-	DEFINE_WAIT(wait);
+	DEFINE_WAIT_FUNC(wait, woken_wake_function);
 
 	start = buf;
 	group = file->private_data;
 
 	pr_debug("%s: group=%p\n", __func__, group);
 
+	add_wait_queue(&group->notification_waitq, &wait);
 	while (1) {
-		prepare_to_wait(&group->notification_waitq, &wait, TASK_INTERRUPTIBLE);
-
 		mutex_lock(&group->notification_mutex);
 		kevent = get_one_event(group, count);
 		mutex_unlock(&group->notification_mutex);
@@ -289,7 +288,8 @@ static ssize_t fanotify_read(struct file *file, char __user *buf,
 
 			if (start != buf)
 				break;
-			schedule();
+
+			wait_woken(&wait, TASK_INTERRUPTIBLE, MAX_SCHEDULE_TIMEOUT);
 			continue;
 		}
 
@@ -318,8 +318,8 @@ static ssize_t fanotify_read(struct file *file, char __user *buf,
 		buf += ret;
 		count -= ret;
 	}
+	remove_wait_queue(&group->notification_waitq, &wait);
 
-	finish_wait(&group->notification_waitq, &wait);
 	if (start != buf && ret != -EFAULT)
 		ret = buf - start;
 	return ret;
@@ -359,6 +359,11 @@ static int fanotify_release(struct inode *ignored, struct file *file)
 #ifdef CONFIG_FANOTIFY_ACCESS_PERMISSIONS
 	struct fanotify_perm_event_info *event, *next;
 
+	/*
+	 * There may be still new events arriving in the notification queue
+	 * but since userspace cannot use fanotify fd anymore, no event can
+	 * enter or leave access_list by now.
+	 */
 	spin_lock(&group->fanotify_data.access_lock);
 
 	atomic_inc(&group->fanotify_data.bypass_perm);
@@ -373,6 +378,13 @@ static int fanotify_release(struct inode *ignored, struct file *file)
 	}
 	spin_unlock(&group->fanotify_data.access_lock);
 
+	/*
+	 * Since bypass_perm is set, newly queued events will not wait for
+	 * access response. Wake up the already sleeping ones now.
+	 * synchronize_srcu() in fsnotify_destroy_group() will wait for all
+	 * processes sleeping in fanotify_handle_event() waiting for access
+	 * response and thus also for all permission events to be freed.
+	 */
 	wake_up(&group->fanotify_data.access_waitq);
 #endif
 

@@ -33,6 +33,9 @@ static const struct clk_ops dpll_m4xen_ck_ops = {
 	.recalc_rate	= &omap4_dpll_regm4xen_recalc,
 	.round_rate	= &omap4_dpll_regm4xen_round_rate,
 	.set_rate	= &omap3_noncore_dpll_set_rate,
+	.set_parent	= &omap3_noncore_dpll_set_parent,
+	.set_rate_and_parent	= &omap3_noncore_dpll_set_rate_and_parent,
+	.determine_rate	= &omap4_dpll_regm4xen_determine_rate,
 	.get_parent	= &omap2_init_dpll_parent,
 };
 #else
@@ -53,6 +56,9 @@ static const struct clk_ops dpll_ck_ops = {
 	.recalc_rate	= &omap3_dpll_recalc,
 	.round_rate	= &omap2_dpll_round_rate,
 	.set_rate	= &omap3_noncore_dpll_set_rate,
+	.set_parent	= &omap3_noncore_dpll_set_parent,
+	.set_rate_and_parent	= &omap3_noncore_dpll_set_rate_and_parent,
+	.determine_rate	= &omap3_noncore_dpll_determine_rate,
 	.get_parent	= &omap2_init_dpll_parent,
 };
 
@@ -61,6 +67,9 @@ static const struct clk_ops dpll_no_gate_ck_ops = {
 	.get_parent	= &omap2_init_dpll_parent,
 	.round_rate	= &omap2_dpll_round_rate,
 	.set_rate	= &omap3_noncore_dpll_set_rate,
+	.set_parent	= &omap3_noncore_dpll_set_parent,
+	.set_rate_and_parent	= &omap3_noncore_dpll_set_rate_and_parent,
+	.determine_rate	= &omap3_noncore_dpll_determine_rate,
 };
 #else
 static const struct clk_ops dpll_core_ck_ops = {};
@@ -97,6 +106,9 @@ static const struct clk_ops omap3_dpll_ck_ops = {
 	.get_parent	= &omap2_init_dpll_parent,
 	.recalc_rate	= &omap3_dpll_recalc,
 	.set_rate	= &omap3_noncore_dpll_set_rate,
+	.set_parent	= &omap3_noncore_dpll_set_parent,
+	.set_rate_and_parent	= &omap3_noncore_dpll_set_rate_and_parent,
+	.determine_rate	= &omap3_noncore_dpll_determine_rate,
 	.round_rate	= &omap2_dpll_round_rate,
 };
 
@@ -106,6 +118,9 @@ static const struct clk_ops omap3_dpll_per_ck_ops = {
 	.get_parent	= &omap2_init_dpll_parent,
 	.recalc_rate	= &omap3_dpll_recalc,
 	.set_rate	= &omap3_dpll4_set_rate,
+	.set_parent	= &omap3_noncore_dpll_set_parent,
+	.set_rate_and_parent	= &omap3_dpll4_set_rate_and_parent,
+	.determine_rate	= &omap3_noncore_dpll_determine_rate,
 	.round_rate	= &omap2_dpll_round_rate,
 };
 #endif
@@ -161,7 +176,8 @@ cleanup:
 }
 
 #if defined(CONFIG_ARCH_OMAP4) || defined(CONFIG_SOC_OMAP5) || \
-	defined(CONFIG_SOC_DRA7XX) || defined(CONFIG_SOC_AM33XX)
+	defined(CONFIG_SOC_DRA7XX) || defined(CONFIG_SOC_AM33XX) || \
+	defined(CONFIG_SOC_AM43XX)
 /**
  * ti_clk_register_dpll_x2 - Registers a DPLLx2 clock
  * @node: device node for this clock
@@ -322,7 +338,7 @@ CLK_OF_DECLARE(ti_omap4_dpll_x2_clock, "ti,omap4-dpll-x2-clock",
 	       of_ti_omap4_dpll_x2_setup);
 #endif
 
-#ifdef CONFIG_SOC_AM33XX
+#if defined(CONFIG_SOC_AM33XX) || defined(CONFIG_SOC_AM43XX)
 static void __init of_ti_am3_dpll_x2_setup(struct device_node *node)
 {
 	ti_clk_register_dpll_x2(node, &dpll_x2_ck_ops, NULL);

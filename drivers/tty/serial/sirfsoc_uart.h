@@ -417,6 +417,10 @@ struct sirfsoc_uart_port {
 
 	struct uart_port		port;
 	struct clk			*clk;
+	/* UART6 for BT usage in A7DA platform need multi-clock source */
+	bool				is_bt_uart;
+	struct clk			*clk_general;
+	struct clk			*clk_noc;
 	/* for SiRFmarco, there are SET/CLR for UART_INT_EN */
 	bool				is_marco;
 	struct sirfsoc_uart_register	*uart_reg;
@@ -449,4 +453,4 @@ struct sirfsoc_uart_port {
 
 /* I/O Mode */
 #define SIRFSOC_UART_IO_RX_MAX_CNT		256
-#define SIRFSOC_UART_IO_TX_REASONABLE_CNT	6
+#define SIRFSOC_UART_IO_TX_REASONABLE_CNT	256
